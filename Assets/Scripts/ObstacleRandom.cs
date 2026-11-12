@@ -9,6 +9,9 @@ public class Obstaclerandom : MonoBehaviour
     [SerializeField] private int _mazeWidth;
     [SerializeField] private int _mazeDepth;
 
+    [Header("First-person / Exit (CHANGED)")]
+    [SerializeField] private Material _floorMaterial; // optional: drag 'Floor Material' here
+
     [Header("Game Prefabs")]
     [SerializeField] private GameObject _treasureChestPrefab; // Contains key or coins
     [SerializeField] private GameObject _doorPrefab;
@@ -19,9 +22,17 @@ public class Obstaclerandom : MonoBehaviour
     [SerializeField] private int _coinChestCount = 5;
     [SerializeField] private int _trapCount = 4;
     [SerializeField] private int _ghostCount = 2;
-    [Range(1, 3)] [SerializeField] private int _doorCount = 1;
+    [Range(1, 3)][SerializeField] private int _doorCount = 1;
 
     private MazeCell[,] _mazeGrid;
+
+    // CHANGED: the scene has BOTH MazeGenerator and Obstaclerandom on the same object,
+    // so two different mazes were being built on top of each other. Keep only this one.
+    void Awake()
+    {
+        var duplicate = GetComponent<MazeGenerator>();
+        if (duplicate != null) duplicate.enabled = false;
+    }
 
     void Start()
     {
@@ -37,8 +48,8 @@ public class Obstaclerandom : MonoBehaviour
 
         GenerateMaze(null, _mazeGrid[0, 0]);
 
-        // Open an outer wall so there's an exit route
-        OpenOuterExit();
+        // CHANGED: entrance + exit pit + floor + first-person player
+        MazeFrame.Build(_mazeGrid, _mazeWidth, _mazeDepth, _mazeCellPrefab, _floorMaterial);
 
         // Once maze is built, spawn all random elements
         SpawnGameElements();
@@ -124,16 +135,6 @@ public class Obstaclerandom : MonoBehaviour
         }
     }
 
-    // --- OPEN OUTER EXIT ---
-    private void OpenOuterExit()
-    {
-        // Opens the outer right wall of the top-right corner cell so the player can exit
-        if (_mazeGrid != null)
-        {
-            _mazeGrid[_mazeWidth - 1, _mazeDepth - 1].ClearRightWall();
-        }
-    }
-
     // --- RANDOM SPAWNING LOGIC ---
     private void SpawnGameElements()
     {
@@ -145,7 +146,9 @@ public class Obstaclerandom : MonoBehaviour
             for (int z = 0; z < _mazeDepth; z++)
             {
                 // Skip the player's start corner (0,0) so they don't die or win instantly
-                if (x == 0 && z == 0) continue; 
+                if (x == 0 && z == 0) continue;
+                // CHANGED: also skip the exit cell so nothing blocks the way out
+                if (x == _mazeWidth - 1 && z == _mazeDepth - 1) continue;
                 availableCells.Add(_mazeGrid[x, z]);
             }
         }
