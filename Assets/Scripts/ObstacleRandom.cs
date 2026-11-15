@@ -22,6 +22,9 @@ public class Obstaclerandom : MonoBehaviour
     [SerializeField] private int _coinChestCount = 5;
     [SerializeField] private int _trapCount = 4;
     [SerializeField] private int _ghostCount = 2;
+    [Tooltip("Ghosts spawn at least this many cells away from the player's start (0,0). " +
+             "If the maze is too small for that, they use the farthest cells available.")]
+    [SerializeField] private float _ghostMinSpawnDistance = 8f;
     [Range(1, 3)][SerializeField] private int _doorCount = 1;
 
     private MazeCell[,] _mazeGrid;
@@ -186,13 +189,19 @@ public class Obstaclerandom : MonoBehaviour
             currentIndex++;
         }
 
-        // 5. Spawn Ghosts
-        for (int i = 0; i < _ghostCount && currentIndex < availableCells.Count; i++)
-        {
+        // 5. Spawn Ghosts - far away from the player's start corner (0,0)
+        var remaining = availableCells.GetRange(currentIndex, availableCells.Count - currentIndex);
+        Vector3 playerStart = _mazeGrid[0, 0].transform.position;
 
-         var ghost = Instantiate(_ghostPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.5f, Quaternion.identity);
-           if (ghost.GetComponent<GhostChase>() == null) ghost.AddComponent<GhostChase>();
-                currentIndex++;
+        var far = remaining.Where(c => Vector3.Distance(c.transform.position, playerStart) >= _ghostMinSpawnDistance).ToList();
+        if (far.Count < _ghostCount)
+            far = remaining.OrderByDescending(c => Vector3.Distance(c.transform.position, playerStart))
+                           .Take(_ghostCount).ToList();   // small maze: take the farthest cells instead
+
+        for (int i = 0; i < _ghostCount && i < far.Count; i++)
+        {
+            var ghost = Instantiate(_ghostPrefab, far[i].transform.position + Vector3.up * 0.5f, Quaternion.identity);
+            if (ghost.GetComponent<GhostChase>() == null) ghost.AddComponent<GhostChase>();
         }
     }
 }

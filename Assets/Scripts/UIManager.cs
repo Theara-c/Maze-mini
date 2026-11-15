@@ -109,7 +109,7 @@ public class UIManager : MonoBehaviour
         AddOutline(keyText);
         keyText.gameObject.SetActive(false);
 
-        helpText = MakeText("Help Text", root, "WASD: move   Mouse: look   Esc / P: pause   R: restart",
+        helpText = MakeText("Help Text", root, "WASD: move   Mouse: look   Space: jump   Click: shrink wall   Esc / P: pause   R: restart",
                             26, TextAnchor.LowerLeft, new Color(1f, 1f, 1f, 0.7f), FontStyle.Normal);
         Anchor(helpText.rectTransform, new Vector2(0, 0), new Vector2(0, 0), new Vector2(0, 0),
                new Vector2(30, 20), new Vector2(1200, 50));

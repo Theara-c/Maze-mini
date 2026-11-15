@@ -91,6 +91,7 @@ public static class MazeFrame
 
         player.AddComponent<Rigidbody>();
         player.AddComponent<PlayerController>();
+        player.AddComponent<WallShrinker>();
 
         // Reuse the scene's Main Camera as the first-person camera.
         Camera cam = Camera.main;

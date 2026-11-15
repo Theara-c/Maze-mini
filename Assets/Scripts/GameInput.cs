@@ -79,4 +79,15 @@ public static class GameInput
         return Input.GetKeyDown(KeyCode.Space);
 #endif
     }
+
+    // Left mouse button: shrink the wall you are looking at.
+    public static bool ShrinkPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var mouse = Mouse.current;
+        return mouse != null && mouse.leftButton.wasPressedThisFrame;
+#else
+        return Input.GetMouseButtonDown(0);
+#endif
+    }
 }
