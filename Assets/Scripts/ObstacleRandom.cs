@@ -20,11 +20,17 @@ public class Obstaclerandom : MonoBehaviour
 
     [Header("Spawn Counts")]
     [SerializeField] private int _coinChestCount = 5;
-    [SerializeField] private int _trapCount = 4;
+    [SerializeField] private int _trapCount = 15;
     [SerializeField] private int _ghostCount = 2;
     [Range(1, 3)][SerializeField] private int _doorCount = 1;
 
     private MazeCell[,] _mazeGrid;
+    //rakrak
+    public MazeCell[,] MazeGrid => _mazeGrid;
+    public Transform Player => GameManager.Instance != null
+    ? GameManager.Instance.player
+    : null;
+    //rakrak
 
     // CHANGED: the scene has BOTH MazeGenerator and Obstaclerandom on the same object,
     // so two different mazes were being built on top of each other. Keep only this one.
@@ -186,11 +192,30 @@ public class Obstaclerandom : MonoBehaviour
             currentIndex++;
         }
 
+        // // 5. Spawn Ghosts
+        // for (int i = 0; i < _ghostCount && currentIndex < availableCells.Count; i++)
+        // {
+        //     Instantiate(_ghostPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.5f, Quaternion.identity);
+        //     currentIndex++;
+        // }
+        //rakrak replace 5 
         // 5. Spawn Ghosts
-        for (int i = 0; i < _ghostCount && currentIndex < availableCells.Count; i++)
+    for (int i = 0; i < _ghostCount && currentIndex < availableCells.Count; i++)
+    {
+        GameObject ghost = Instantiate(
+            _ghostPrefab,
+            availableCells[currentIndex].transform.position + Vector3.up * 0.5f,
+            Quaternion.identity
+        );
+
+        GhostScript ghostScript = ghost.GetComponent<GhostScript>();
+
+        if (ghostScript != null)
         {
-            Instantiate(_ghostPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.5f, Quaternion.identity);
-            currentIndex++;
+            ghostScript.Initialize(_mazeGrid, GameManager.Instance.player);
         }
+
+        currentIndex++;
+    }
     }
 }
