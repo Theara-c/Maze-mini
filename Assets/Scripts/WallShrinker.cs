@@ -15,7 +15,7 @@ public class WallShrinker : MonoBehaviour
     [Tooltip("Height of a shrunk wall (world units). Keep it under the player's jumpHeight (0.35).")]
     public float shrunkHeight = 0.2f;
     [Tooltip("How many walls can be shrunk per game.")]
-    public int maxShrinks = 10;
+    public int maxShrinks = 5;
 
     int used;
     Camera cam;
