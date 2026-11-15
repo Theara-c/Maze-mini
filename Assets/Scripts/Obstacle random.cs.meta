@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 4348b117758dbbc41829d1486542eba1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - _mazeCellPrefab: {instanceID: 0}
+  - _treasureChestPrefab: {fileID: 5818452980607123211, guid: 918aaee98b5561b47bbf6f094e784f13, type: 3}
+  - _doorPrefab: {fileID: 5760976824309607439, guid: 55140d57dc1fc09488ec64b8d1d59e73, type: 3}
+  - _trapPrefab: {instanceID: 0}
+  - _ghostPrefab: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
