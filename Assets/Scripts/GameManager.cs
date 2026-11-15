@@ -1,44 +1,88 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
-// Self-contained: draws its own UI with OnGUI, so no Canvas or TextMeshPro setup is needed.
-// Created automatically by MazeFrame if the scene does not have one.
+// Game state + win/lose logic. Keeps the same public API your other scripts already use
+// (Instance, player, fallY, hasKey, IsPlaying, CollectKey, ShowHint, Win, Lose, Restart).
+// The screen UI is drawn by UIManager, which listens to the static events below.
+// Created automatically by MazeFrame if the scene does not already have one.
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
+    // ---- Events the UI listens to (no direct reference to the UI needed) ----
+    public static event Action<string> OnHintChanged;       // hint text ("" = hide)
+    public static event Action<bool> OnKeyChanged;          // hasKey
+    public static event Action<bool> OnMenuChanged;         // main menu visible?
+    public static event Action<bool> OnPauseChanged;        // paused?
+    public static event Action<bool, string> OnGameEnded;   // (isWin, message)
+
+    [Header("Settings")]
     public float fallY = -30f;          // safety net: lose if the player somehow drops below this
     public Transform player;
     public bool showKeyStatus = false;  // turn on once you add a key to the game
+    public bool useMainMenu = true;     // show a Play / Quit screen when the scene starts
 
     public bool hasKey { get; private set; }
-    public bool IsPlaying { get; private set; }
+    public bool IsPlaying { get; private set; }   // false while in menu, paused, or after the game ends
+    public bool IsPaused { get; private set; }
+    public bool InMenu { get; private set; }
 
+    const string StartHint = "Find the way out. The exit is a pit at the far corner: walk off the ledge!";
+
+    static bool s_skipMenuOnce;         // Restart skips the main menu; "Main Menu" button does not
+    bool ended;
     string hint = "";
     float hintClearTime;
-    string endMessage = "";
-    bool endIsWin;
-
-    GUIStyle hintStyle, titleStyle, smallStyle, buttonStyle;
 
     void Awake()
     {
         Instance = this;
-        IsPlaying = true;
+        Time.timeScale = 1f;
+
+        InMenu = useMainMenu && !s_skipMenuOnce;
+        s_skipMenuOnce = false;
+        IsPlaying = !InMenu;
+
+        // build the on-screen UI if the scene does not have one
+        if (FindFirstObjectByType<UIManager>() == null)
+            gameObject.AddComponent<UIManager>();
     }
 
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-        ShowHint("Find the way out. The exit is a pit at the far corner: walk off the ledge!", 10f);
+        SetCursor(IsPlaying);
+
+        OnKeyChanged?.Invoke(hasKey);
+        OnMenuChanged?.Invoke(InMenu);
+
+        if (!InMenu) ShowHint(StartHint, 10f);
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+            Time.timeScale = 1f;   // never leave the editor frozen
+        }
     }
 
     void Update()
     {
-        if (GameInput.RestartPressed()) Restart();
+        if (hint != "" && Time.time > hintClearTime)
+        {
+            hint = "";
+            OnHintChanged?.Invoke("");
+        }
 
-        if (hint != "" && Time.time > hintClearTime) hint = "";
+        if (InMenu) return;
+
+        if (GameInput.RestartPressed()) { Restart(); return; }
+        if (GameInput.PausePressed()) TogglePause();
 
         if (!IsPlaying) return;
 
@@ -46,9 +90,37 @@ public class GameManager : MonoBehaviour
             Lose("You fell off the map!");
     }
 
+    // ---------- Menu / pause ----------
+
+    public void StartGame()
+    {
+        if (!InMenu) return;
+        InMenu = false;
+        IsPlaying = true;
+        SetCursor(true);
+        OnMenuChanged?.Invoke(false);
+        ShowHint(StartHint, 10f);
+    }
+
+    public void TogglePause()
+    {
+        if (InMenu || ended) return;
+
+        IsPaused = !IsPaused;
+        IsPlaying = !IsPaused;
+        Time.timeScale = IsPaused ? 0f : 1f;
+        SetCursor(!IsPaused);
+        OnPauseChanged?.Invoke(IsPaused);
+    }
+
+    public void Resume() { if (IsPaused) TogglePause(); }
+
+    // ---------- Gameplay ----------
+
     public void CollectKey()
     {
         hasKey = true;
+        OnKeyChanged?.Invoke(true);
         ShowHint("You got the key!", 3f);
     }
 
@@ -56,6 +128,7 @@ public class GameManager : MonoBehaviour
     {
         hint = message;
         hintClearTime = Time.time + seconds;
+        OnHintChanged?.Invoke(hint);
     }
 
     public void Win(string message = "YOU ESCAPED!")
@@ -70,63 +143,43 @@ public class GameManager : MonoBehaviour
 
     void EndGame(string message, bool win)
     {
-        if (!IsPlaying) return;   // stops win and lose from both firing
+        if (ended || InMenu || IsPaused) return;   // stops win and lose from both firing
+        ended = true;
         IsPlaying = false;
-        endMessage = message;
-        endIsWin = win;
 
-        // free the mouse so the Restart button can be clicked
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        // free the mouse so the buttons can be clicked
+        SetCursor(false);
+        OnGameEnded?.Invoke(win, message);
     }
+
+    // ---------- Scene control ----------
 
     public void Restart()
     {
+        Time.timeScale = 1f;
+        s_skipMenuOnce = true;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    void MakeStyles()
+    public void ReturnToMenu()
     {
-        if (hintStyle != null) return;
-
-        int basic = Mathf.Max(14, Mathf.RoundToInt(Screen.height * 0.03f));
-
-        hintStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontSize = basic, fontStyle = FontStyle.Bold };
-        hintStyle.normal.textColor = Color.white;
-
-        titleStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = basic * 2, fontStyle = FontStyle.Bold, wordWrap = true };
-
-        smallStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.LowerLeft, fontSize = Mathf.RoundToInt(basic * 0.7f) };
-        smallStyle.normal.textColor = new Color(1f, 1f, 1f, 0.7f);
-
-        buttonStyle = new GUIStyle(GUI.skin.button) { fontSize = basic };
+        Time.timeScale = 1f;
+        s_skipMenuOnce = false;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
-    void OnGUI()
+    public void QuitGame()
     {
-        MakeStyles();
+#if UNITY_EDITOR
+        EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
 
-        if (hint != "")
-            GUI.Label(new Rect(0, Screen.height * 0.05f, Screen.width, Screen.height * 0.1f), hint, hintStyle);
-
-        if (showKeyStatus)
-            GUI.Label(new Rect(15, 10, 300, 30), "Key: " + (hasKey ? "Yes" : "No"), hintStyle);
-
-        GUI.Label(new Rect(15, 0, 400, Screen.height - 10), "WASD: move   Mouse: look   R: restart", smallStyle);
-
-        if (!IsPlaying)
-        {
-            float w = Mathf.Min(Screen.width * 0.7f, 640f);
-            float h = Mathf.Min(Screen.height * 0.6f, 380f);
-            Rect box = new Rect((Screen.width - w) / 2f, (Screen.height - h) / 2f, w, h);
-
-            GUI.Box(box, GUIContent.none);
-
-            titleStyle.normal.textColor = endIsWin ? new Color(0.4f, 1f, 0.5f) : new Color(1f, 0.4f, 0.4f);
-            GUI.Label(new Rect(box.x, box.y + 10, w, h - 110), endMessage, titleStyle);
-
-            if (GUI.Button(new Rect(box.x + w / 2f - 120, box.yMax - 90, 240, 60), "Restart (R)", buttonStyle))
-                Restart();
-        }
+    static void SetCursor(bool locked)
+    {
+        Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
+        Cursor.visible = !locked;
     }
 }

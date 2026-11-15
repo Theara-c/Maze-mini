@@ -21,6 +21,12 @@ public class MazeCell : MonoBehaviour
 
     public bool IsVisited { get; private set; }
 
+    // read-only wall state (used by GhostChase to find the open paths)
+       public bool HasLeftWall  => _leftWall.activeSelf;
+    public bool HasRightWall => _rightWall.activeSelf;
+    public bool HasFrontWall => _frontWall.activeSelf;
+    public bool HasBackWall  => _backWall.activeSelf;
+
     public void Visit()
     {
         IsVisited = true;

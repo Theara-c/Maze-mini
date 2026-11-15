@@ -46,4 +46,37 @@ public static class GameInput
         return Input.GetKeyDown(KeyCode.R);
 #endif
     }
+
+    // Esc or P toggles the pause menu.
+    public static bool PausePressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var kb = Keyboard.current;
+        return kb != null && (kb.escapeKey.wasPressedThisFrame || kb.pKey.wasPressedThisFrame);
+#else
+        return Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P);
+#endif
+    }
+
+    // Hold Shift to sprint.
+    public static bool SprintHeld()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var kb = Keyboard.current;
+        return kb != null && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed);
+#else
+        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+#endif
+    }
+
+    // Space to jump.
+    public static bool JumpPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var kb = Keyboard.current;
+        return kb != null && kb.spaceKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.Space);
+#endif
+    }
 }

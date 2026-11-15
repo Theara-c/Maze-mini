@@ -189,8 +189,10 @@ public class Obstaclerandom : MonoBehaviour
         // 5. Spawn Ghosts
         for (int i = 0; i < _ghostCount && currentIndex < availableCells.Count; i++)
         {
-            Instantiate(_ghostPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.5f, Quaternion.identity);
-            currentIndex++;
+
+         var ghost = Instantiate(_ghostPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.5f, Quaternion.identity);
+           if (ghost.GetComponent<GhostChase>() == null) ghost.AddComponent<GhostChase>();
+                currentIndex++;
         }
     }
 }
