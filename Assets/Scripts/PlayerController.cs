@@ -15,7 +15,7 @@ public class PlayerController : MonoBehaviour
     [Header("Jump")]
     [Tooltip("Height in world units. Walls are 1 high, so keep this under about 0.6 or the player " +
              "can see over (or climb onto) the walls.")]
-    public float jumpHeight = 7f;
+    public float jumpHeight = 0.35f;
     [Tooltip("Can still jump this long after walking off an edge.")]
     public float coyoteTime = 0.1f;
     [Tooltip("A jump pressed this long before landing still counts.")]
