@@ -51,5 +51,45 @@ public class MazeCell : MonoBehaviour
     public void ClearBackWall()
     {
         _backWall.SetActive(false);
+        
     }
+    //rakrak
+        public bool HasLeftWall()
+    {
+        return _leftWall.activeSelf;
+    }
+
+    public bool HasRightWall()
+    {
+        return _rightWall.activeSelf;
+    }
+
+    public bool HasFrontWall()
+    {
+        return _frontWall.activeSelf;
+    }
+
+    public bool HasBackWall()
+    {
+        return _backWall.activeSelf;
+    }
+    public void CloseLeftWall()
+{
+    _leftWall.SetActive(true);
+}
+
+public void CloseRightWall()
+{
+    _rightWall.SetActive(true);
+}
+
+public void CloseFrontWall()
+{
+    _frontWall.SetActive(true);
+}
+
+public void CloseBackWall()
+{
+    _backWall.SetActive(true);
+}
 }

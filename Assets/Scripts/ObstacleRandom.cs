@@ -1,3 +1,4 @@
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,62 +6,85 @@ using UnityEngine;
 
 public class Obstaclerandom : MonoBehaviour
 {
+    [Header("Maze Settings")]
     [SerializeField] private MazeCell _mazeCellPrefab;
     [SerializeField] private int _mazeWidth;
     [SerializeField] private int _mazeDepth;
 
-    [Header("First-person / Exit (CHANGED)")]
-    [SerializeField] private Material _floorMaterial; // optional: drag 'Floor Material' here
+    [Header("First Person / Exit")]
+    [SerializeField] private Material _floorMaterial;
 
     [Header("Game Prefabs")]
-    [SerializeField] private GameObject _treasureChestPrefab; // Contains key or coins
+    [SerializeField] private GameObject _treasureChestPrefab;
     [SerializeField] private GameObject _doorPrefab;
     [SerializeField] private GameObject _trapPrefab;
     [SerializeField] private GameObject _ghostPrefab;
 
     [Header("Spawn Counts")]
     [SerializeField] private int _coinChestCount = 5;
-    [SerializeField] private int _trapCount = 4;
+    [SerializeField] private int _trapCount = 15;
     [SerializeField] private int _ghostCount = 2;
     [Tooltip("Ghosts spawn at least this many cells away from the player's start (0,0). " +
              "If the maze is too small for that, they use the farthest cells available.")]
     [SerializeField] private float _ghostMinSpawnDistance = 8f;
-    [Range(1, 3)][SerializeField] private int _doorCount = 1;
+    
+    [Range(1, 25)][SerializeField] private int _doorCount = 1;
 
     private MazeCell[,] _mazeGrid;
 
-    // CHANGED: the scene has BOTH MazeGenerator and Obstaclerandom on the same object,
-    // so two different mazes were being built on top of each other. Keep only this one.
+    public MazeCell[,] MazeGrid => _mazeGrid;
+
+    public Transform Player => GameManager.Instance != null
+        ? GameManager.Instance.player
+        : null;
+
     void Awake()
     {
         var duplicate = GetComponent<MazeGenerator>();
-        if (duplicate != null) duplicate.enabled = false;
+
+        if (duplicate != null)
+        {
+            duplicate.enabled = false;
+        }
     }
 
     void Start()
     {
         _mazeGrid = new MazeCell[_mazeWidth, _mazeDepth];
 
+        // Create maze cells
         for (int x = 0; x < _mazeWidth; x++)
         {
             for (int z = 0; z < _mazeDepth; z++)
             {
-                _mazeGrid[x, z] = Instantiate(_mazeCellPrefab, new Vector3(x, 0, z), Quaternion.identity);
+                _mazeGrid[x, z] = Instantiate(
+                    _mazeCellPrefab,
+                    new Vector3(x, 0, z),
+                    Quaternion.identity
+                );
             }
         }
 
+        // Generate maze
         GenerateMaze(null, _mazeGrid[0, 0]);
 
-        // CHANGED: entrance + exit pit + floor + first-person player
-        MazeFrame.Build(_mazeGrid, _mazeWidth, _mazeDepth, _mazeCellPrefab, _floorMaterial);
+        // Build floor, entrance, exit and player
+        MazeFrame.Build(
+            _mazeGrid,
+            _mazeWidth,
+            _mazeDepth,
+            _mazeCellPrefab,
+            _floorMaterial
+        );
 
-        // Once maze is built, spawn all random elements
+        // Spawn game objects
         SpawnGameElements();
     }
 
     private void GenerateMaze(MazeCell previousCell, MazeCell currentCell)
     {
         currentCell.Visit();
+
         ClearWalls(previousCell, currentCell);
 
         MazeCell nextCell;
@@ -73,13 +97,17 @@ public class Obstaclerandom : MonoBehaviour
             {
                 GenerateMaze(currentCell, nextCell);
             }
+
         } while (nextCell != null);
     }
 
     private MazeCell GetNextUnvisitedCell(MazeCell currentCell)
     {
         var unvisitedCells = GetUnvisitedCells(currentCell);
-        return unvisitedCells.OrderBy(_ => Random.Range(1, 10)).FirstOrDefault();
+
+        return unvisitedCells
+            .OrderBy(_ => Random.Range(1, 10))
+            .FirstOrDefault();
     }
 
     private IEnumerable<MazeCell> GetUnvisitedCells(MazeCell currentCell)
@@ -90,31 +118,40 @@ public class Obstaclerandom : MonoBehaviour
         if (x + 1 < _mazeWidth)
         {
             var cellToRight = _mazeGrid[x + 1, z];
-            if (!cellToRight.IsVisited) yield return cellToRight;
+
+            if (!cellToRight.IsVisited)
+                yield return cellToRight;
         }
 
         if (x - 1 >= 0)
         {
             var cellToLeft = _mazeGrid[x - 1, z];
-            if (!cellToLeft.IsVisited) yield return cellToLeft;
+
+            if (!cellToLeft.IsVisited)
+                yield return cellToLeft;
         }
 
         if (z + 1 < _mazeDepth)
         {
             var cellToFront = _mazeGrid[x, z + 1];
-            if (!cellToFront.IsVisited) yield return cellToFront;
+
+            if (!cellToFront.IsVisited)
+                yield return cellToFront;
         }
 
         if (z - 1 >= 0)
         {
             var cellToBack = _mazeGrid[x, z - 1];
-            if (!cellToBack.IsVisited) yield return cellToBack;
+
+            if (!cellToBack.IsVisited)
+                yield return cellToBack;
         }
     }
 
     private void ClearWalls(MazeCell previousCell, MazeCell currentCell)
     {
-        if (previousCell == null) return;
+        if (previousCell == null)
+            return;
 
         if (previousCell.transform.position.x < currentCell.transform.position.x)
         {
@@ -138,8 +175,11 @@ public class Obstaclerandom : MonoBehaviour
         }
     }
 
-    // --- RANDOM SPAWNING LOGIC ---
-    private void SpawnGameElements()
+    // --------------------------------
+    // RANDOM SPAWNING
+    // --------------------------------
+
+  private void SpawnGameElements()
     {
         // Create a list of available cells, excluding the starting position (0,0)
         List<MazeCell> availableCells = new List<MazeCell>();
@@ -182,13 +222,22 @@ public class Obstaclerandom : MonoBehaviour
             currentIndex++;
         }
 
-        // 4. Spawn Traps
-        for (int i = 0; i < _trapCount && currentIndex < availableCells.Count; i++)
+        
+        // 3. Spawn traps
+        for (int i = 0;
+             i < _trapCount && currentIndex < availableCells.Count;
+             i++)
         {
-            Instantiate(_trapPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.1f, Quaternion.identity);
+            Instantiate(
+                _trapPrefab,
+                availableCells[currentIndex].transform.position
+                    + Vector3.up * 0.1f,
+                Quaternion.identity
+            );
+
             currentIndex++;
         }
-
+  
         // 5. Spawn Ghosts - far away from the player's start corner (0,0)
         var remaining = availableCells.GetRange(currentIndex, availableCells.Count - currentIndex);
         Vector3 playerStart = _mazeGrid[0, 0].transform.position;
@@ -205,3 +254,10 @@ public class Obstaclerandom : MonoBehaviour
         }
     }
 }
+    
+
+    // --------------------------------
+    // DOOR SPAWNING
+    // --------------------------------
+
+
