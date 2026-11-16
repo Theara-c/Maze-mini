@@ -135,4 +135,13 @@ public static class GameInput
         return Input.GetKeyDown(KeyCode.R);
 #endif
     }
+    public static bool InteractPressed()
+{
+#if ENABLE_INPUT_SYSTEM
+    var kb = Keyboard.current;
+    return kb != null && kb.eKey.wasPressedThisFrame;
+#else
+    return Input.GetKeyDown(KeyCode.E);
+#endif
+}
 }
