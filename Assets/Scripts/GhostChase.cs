@@ -26,6 +26,14 @@ public class GhostChase : MonoBehaviour
     [Tooltip("Add 90, 180 or 270 if the model faces the wrong way when it moves.")]
     public float facingOffset = 0f;
 
+    [Header("Photo Face")]
+    [Tooltip("Picture shown as the ghost (PNG with a transparent background). Leave empty to load Assets/Resources/GhostFace.png.")]
+    public Texture2D faceTexture;
+    [Tooltip("How tall the picture is, in world units. The maze cells are 1 wide.")]
+    public float faceHeight = 0.6f;
+    [Tooltip("Hide the original ghost model and show only the picture.")]
+    public bool hideOriginalModel = true;
+
     [Header("Setup")]
     [Tooltip("The ghost's own colliders are not needed (catching uses distance) and could push the player.")]
     public bool disableColliders = true;
@@ -44,6 +52,13 @@ public class GhostChase : MonoBehaviour
 
     void Awake()
     {
+        // The free ghost asset has its own keyboard script: Space teleports the ghost to (0,0,0),
+        // arrow keys move it, A / S play animations. Turn it off so only GhostChase controls the ghost.
+        var keyboardScript = GetComponent<Sample.GhostScript>();
+        if (keyboardScript != null) keyboardScript.enabled = false;
+
+        SetupFace();
+
         var rb = GetComponent<Rigidbody>();
         if (rb != null) { rb.isKinematic = true; rb.useGravity = false; }
 
@@ -74,6 +89,41 @@ public class GhostChase : MonoBehaviour
         }
 
         ghostCell = ClampToMaze(ToCell(transform.position));
+    }
+
+    // ---------- Photo face ----------
+
+    Transform face;
+
+    void SetupFace()
+    {
+        if (faceTexture == null) faceTexture = Resources.Load<Texture2D>("GhostFace");
+        if (faceTexture == null) return;   // no picture found: keep the normal ghost model
+
+        if (hideOriginalModel)
+            foreach (var r in GetComponentsInChildren<Renderer>()) r.enabled = false;
+
+        var go = new GameObject("Ghost Face");
+        go.transform.SetParent(transform, false);
+        // the picture is centred on the ghost's position; ppu sets how tall it is in world units
+        float ppu = faceTexture.height / Mathf.Max(0.01f, faceHeight);
+        var sprite = Sprite.Create(faceTexture, new Rect(0, 0, faceTexture.width, faceTexture.height),
+                                   new Vector2(0.5f, 0.5f), ppu);
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+        face = go.transform;
+    }
+
+    // the picture always turns to face the player's camera (stays upright)
+    void LateUpdate()
+    {
+        if (face == null) return;
+        var cam = Camera.main;
+        if (cam == null) return;
+
+        Vector3 f = cam.transform.forward;
+        f.y = 0f;
+        if (f.sqrMagnitude > 0.0001f) face.rotation = Quaternion.LookRotation(f);
     }
 
     void Update()
@@ -223,7 +273,8 @@ public class GhostChase : MonoBehaviour
 
         if (flat < catchDistance && Mathf.Abs(diff.y) < 1f)
         {
-            if (gm != null) gm.Lose("A ghost caught you!");
+            // a ghost that takes a coin is used up and disappears
+            if (gm != null) { if (gm.HitByGhost()) Destroy(gameObject); }
             else Debug.Log("[GhostChase] Caught the player (no GameManager in scene).");
         }
     }

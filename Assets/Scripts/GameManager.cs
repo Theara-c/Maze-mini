@@ -16,6 +16,7 @@ public class GameManager : MonoBehaviour
     // ---- Events the UI listens to (no direct reference to the UI needed) ----
     public static event Action<string> OnHintChanged;       // hint text ("" = hide)
     public static event Action<bool> OnKeyChanged;          // hasKey
+    public static event Action<int> OnCoinsChanged;         // coins (= lives)
     public static event Action<bool> OnMenuChanged;         // main menu visible?
     public static event Action<bool> OnPauseChanged;        // paused?
     public static event Action<bool, string> OnGameEnded;   // (isWin, message)
@@ -25,6 +26,13 @@ public class GameManager : MonoBehaviour
     public Transform player;
     public bool showKeyStatus = false;  // turn on once you add a key to the game
     public bool useMainMenu = true;     // show a Play / Quit screen when the scene starts
+
+    [Header("Coins = Lives")]
+    public int startingCoins = 0;       // 0 = the first ghost touch ends the game unless you picked up a coin
+    public float hitCooldown = 2f;      // seconds of protection after a ghost takes a coin
+
+    public int coins { get; private set; }
+    float invulnerableUntil;
 
     public bool hasKey { get; private set; }
     public bool IsPlaying { get; private set; }   // false while in menu, paused, or after the game ends
@@ -43,6 +51,8 @@ public class GameManager : MonoBehaviour
         Instance = this;
         Time.timeScale = 1f;
 
+        coins = startingCoins;
+
         InMenu = useMainMenu && !s_skipMenuOnce;
         s_skipMenuOnce = false;
         IsPlaying = !InMenu;
@@ -57,6 +67,7 @@ public class GameManager : MonoBehaviour
         SetCursor(IsPlaying);
 
         OnKeyChanged?.Invoke(hasKey);
+        OnCoinsChanged?.Invoke(coins);
         OnMenuChanged?.Invoke(InMenu);
 
         if (!InMenu) ShowHint(StartHint, 10f);
@@ -122,6 +133,33 @@ public class GameManager : MonoBehaviour
         hasKey = true;
         OnKeyChanged?.Invoke(true);
         ShowHint("You got the key!", 3f);
+    }
+
+    public void AddCoin(int amount = 1)
+    {
+        coins += amount;
+        OnCoinsChanged?.Invoke(coins);
+        ShowHint("+1 coin! (" + coins + ")", 2f);
+    }
+
+    // Called by a ghost when it touches the player: costs one coin, or ends the game at 0 coins.
+    // Returns true if the ghost used up a coin (the ghost should then destroy itself).
+    public bool HitByGhost()
+    {
+        if (!IsPlaying || ended) return false;
+        if (Time.time < invulnerableUntil) return false;   // just got hit, give the player a moment to run
+
+        if (coins <= 0)
+        {
+            Lose("A ghost caught you!");
+            return false;
+        }
+
+        coins--;
+        invulnerableUntil = Time.time + hitCooldown;
+        OnCoinsChanged?.Invoke(coins);
+        ShowHint("A ghost took a coin!  Coins left: " + coins, 2.5f);
+        return true;
     }
 
     public void ShowHint(string message, float seconds = 2f)

@@ -17,6 +17,13 @@ public class GhostWarning : MonoBehaviour
     public bool showDistance = true;
     public float pulseSpeed = 6f;
 
+    [Header("Sound")]
+    [Tooltip("Plays on a loop for as long as the warning is showing. If empty, loads Assets/Resources/GhostWarning (.mp3 / .wav / .ogg).")]
+    public AudioClip warningClip;
+    [Range(0f, 1f)] public float warningVolume = 1f;
+
+    AudioSource audioSrc;
+
     GameObject panel;
     CanvasGroup panelGroup;
     Text distanceText;
@@ -49,6 +56,14 @@ public class GhostWarning : MonoBehaviour
     {
         font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         BuildUI();
+
+        if (warningClip == null) warningClip = Resources.Load<AudioClip>("GhostWarning");
+        audioSrc = gameObject.AddComponent<AudioSource>();
+        audioSrc.clip = warningClip;
+        audioSrc.loop = true;            // keeps repeating until we call Stop()
+        audioSrc.playOnAwake = false;
+        audioSrc.spatialBlend = 0f;      // 2D sound, same volume wherever the ghost is
+        audioSrc.volume = warningVolume;
     }
 
     void Update()
@@ -97,6 +112,13 @@ public class GhostWarning : MonoBehaviour
         if (visible == show) return;
         visible = show;
         panel.SetActive(show);
+
+        // sound starts with the warning and stops when it disappears
+        if (audioSrc != null && audioSrc.clip != null)
+        {
+            if (show) audioSrc.Play();
+            else audioSrc.Stop();
+        }
     }
 
     // ---------- Build the panel ----------

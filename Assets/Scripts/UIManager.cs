@@ -20,7 +20,7 @@ public class UIManager : MonoBehaviour
     static readonly Color LoseColor  = new Color(1f, 0.4f, 0.4f);
 
     Font font;
-    Text hintText, keyText, helpText, endText;
+    Text hintText, keyText, coinText, helpText, endText;
     GameObject menuPanel, pausePanel, endPanel;
 
     // ---------- Lifecycle ----------
@@ -36,6 +36,7 @@ public class UIManager : MonoBehaviour
     {
         GameManager.OnHintChanged  += HandleHint;
         GameManager.OnKeyChanged   += HandleKey;
+        GameManager.OnCoinsChanged += HandleCoins;
         GameManager.OnMenuChanged  += HandleMenu;
         GameManager.OnPauseChanged += HandlePause;
         GameManager.OnGameEnded    += HandleEnd;
@@ -45,6 +46,7 @@ public class UIManager : MonoBehaviour
     {
         GameManager.OnHintChanged  -= HandleHint;
         GameManager.OnKeyChanged   -= HandleKey;
+        GameManager.OnCoinsChanged -= HandleCoins;
         GameManager.OnMenuChanged  -= HandleMenu;
         GameManager.OnPauseChanged -= HandlePause;
         GameManager.OnGameEnded    -= HandleEnd;
@@ -60,6 +62,8 @@ public class UIManager : MonoBehaviour
         keyText.gameObject.SetActive(gm != null && gm.showKeyStatus);
         keyText.text = "Key: " + (hasKey ? "Yes" : "No");
     }
+
+    void HandleCoins(int coins) { coinText.text = "Coins: " + coins; }
 
     void HandleMenu(bool show)
     {
@@ -108,6 +112,11 @@ public class UIManager : MonoBehaviour
                new Vector2(30, -30), new Vector2(400, 60));
         AddOutline(keyText);
         keyText.gameObject.SetActive(false);
+
+        coinText = MakeText("Coin Text", root, "Coins: 0", 40, TextAnchor.UpperLeft, new Color(1f, 0.85f, 0.2f), FontStyle.Bold);
+        Anchor(coinText.rectTransform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
+               new Vector2(30, -90), new Vector2(400, 60));
+        AddOutline(coinText);
 
         helpText = MakeText("Help Text", root, "WASD: move   Mouse: look   Space: jump   Click: shrink wall   Esc / P: pause   R: restart",
                             26, TextAnchor.LowerLeft, new Color(1f, 1f, 1f, 0.7f), FontStyle.Normal);

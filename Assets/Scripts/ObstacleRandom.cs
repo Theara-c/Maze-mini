@@ -48,6 +48,82 @@ public class Obstaclerandom : MonoBehaviour
         }
     }
 
+
+
+  private void SpawnDoors()
+{
+    List<System.Action> doorPlacements =
+        new List<System.Action>();
+
+    for (int x = 0; x < _mazeWidth; x++)
+    {
+        for (int z = 0; z < _mazeDepth; z++)
+        {
+            MazeCell cell = _mazeGrid[x, z];
+
+            // Avoid placing doors too close to the player start.
+            if (x + z < 3)
+                continue;
+
+            // Right-side passage
+            if (x + 1 < _mazeWidth && !cell.HasRightWall)
+            {
+                int cellX = x;
+                int cellZ = z;
+
+                doorPlacements.Add(() =>
+                {
+                    Vector3 position =
+                        _mazeGrid[cellX, cellZ].transform.position
+                        + new Vector3(0.5f, 0.5f, 0f);
+
+                    Instantiate(
+                        _doorPrefab,
+                        position,
+                        Quaternion.Euler(0f, 90f, 0f)
+                    );
+                });
+            }
+
+            // Front-side passage
+            if (z + 1 < _mazeDepth && !cell.HasFrontWall)
+            {
+                int cellX = x;
+                int cellZ = z;
+
+                doorPlacements.Add(() =>
+                {
+                    Vector3 position =
+                        _mazeGrid[cellX, cellZ].transform.position
+                        + new Vector3(0f, 0.5f, 0.5f);
+
+                    Instantiate(
+                        _doorPrefab,
+                        position,
+                        Quaternion.identity
+                    );
+                });
+            }
+        }
+    }
+
+    // Randomize available door positions.
+    doorPlacements = doorPlacements
+        .OrderBy(_ => Random.value)
+        .ToList();
+
+    int doorsSpawned = Mathf.Min(
+        _doorCount,
+        doorPlacements.Count
+    );
+
+    for (int i = 0; i < doorsSpawned; i++)
+    {
+        doorPlacements[i].Invoke();
+    }
+
+    Debug.Log("Doors spawned: " + doorsSpawned);
+}
     void Start()
     {
         _mazeGrid = new MazeCell[_mazeWidth, _mazeDepth];
@@ -202,11 +278,7 @@ public class Obstaclerandom : MonoBehaviour
         int currentIndex = 0;
 
         // 1. Spawn Doors (1 to 3)
-        for (int i = 0; i < _doorCount && currentIndex < availableCells.Count; i++)
-        {
-            Instantiate(_doorPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.5f, Quaternion.identity);
-            currentIndex++;
-        }
+        SpawnDoors();
 
         // 2. Spawn the Key Chest (Only 1 chest contains the key)
         if (currentIndex < availableCells.Count)
@@ -219,6 +291,12 @@ public class Obstaclerandom : MonoBehaviour
         for (int i = 0; i < _coinChestCount && currentIndex < availableCells.Count; i++)
         {
             GameObject coinChest = Instantiate(_treasureChestPrefab, availableCells[currentIndex].transform.position + Vector3.up * 0.5f, Quaternion.identity);
+
+            // coin chests give a coin (a life), not the door key
+            var keyPickup = coinChest.GetComponent<TreasureChest>();
+            if (keyPickup != null) Destroy(keyPickup);
+            if (coinChest.GetComponent<Coin>() == null) coinChest.AddComponent<Coin>();
+
             currentIndex++;
         }
 
