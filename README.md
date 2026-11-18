@@ -5,6 +5,7 @@ dodge ghosts and traps, open doors, and escape by walking off the ledge into the
 
 This README explains what each script does and how the scripts connect. 
 
+LinK demo : https://youtu.be/4rgC1MWRrM8
 ---
 
 ## Controls
